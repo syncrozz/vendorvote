@@ -1,0 +1,11 @@
+INSERT INTO vendors (id, name, menu_description) SELECT 'V001', 'Sabri', 'Menu jualan Sabri' WHERE NOT EXISTS (SELECT 1 FROM vendors WHERE id='V001');
+INSERT INTO vendors (id, name, menu_description) SELECT 'V002', 'LeeMau', 'Menu jualan LeeMau' WHERE NOT EXISTS (SELECT 1 FROM vendors WHERE id='V002');
+INSERT INTO vendors (id, name, menu_description) SELECT 'V003', 'Norhasni', 'Menu jualan Norhasni' WHERE NOT EXISTS (SELECT 1 FROM vendors WHERE id='V003');
+INSERT INTO vendors (id, name, menu_description) SELECT 'V004', 'Sani', 'Menu jualan Sani' WHERE NOT EXISTS (SELECT 1 FROM vendors WHERE id='V004');
+INSERT INTO vendors (id, name, menu_description) SELECT 'V005', 'Azzatul', 'Menu jualan Azzatul' WHERE NOT EXISTS (SELECT 1 FROM vendors WHERE id='V005');
+INSERT INTO vendors (id, name, menu_description) SELECT 'V006', 'SitiAminah (Kakak Siti)', 'Menu jualan SitiAminah' WHERE NOT EXISTS (SELECT 1 FROM vendors WHERE id='V006');
+INSERT INTO vendors (id, name, menu_description) SELECT 'V007', 'Bos Colek Buah', 'Colek buah' WHERE NOT EXISTS (SELECT 1 FROM vendors WHERE id='V007');
+INSERT INTO vendors (id, name, menu_description) SELECT 'V008', 'Nasir (Nasi Lemak)', 'Nasi lemak' WHERE NOT EXISTS (SELECT 1 FROM vendors WHERE id='V008');
+INSERT INTO vendors (id, name, menu_description) SELECT 'V009', 'Farra Wahida', 'Menu jualan Farra Wahida' WHERE NOT EXISTS (SELECT 1 FROM vendors WHERE id='V009');
+INSERT INTO voting_sessions (id, title, starts_at, ends_at, status, min_votes, max_choices) SELECT 'PMK-2026-10', 'Pasar Malam KPMBP — Oktober 2026', NOW() - INTERVAL '1 day', NOW() + INTERVAL '1 day', 'open', 20, 5 WHERE NOT EXISTS (SELECT 1 FROM voting_sessions WHERE id='PMK-2026-10');
+INSERT INTO session_vendors (session_id, vendor_id) SELECT 'PMK-2026-10', id FROM vendors WHERE active = TRUE AND NOT EXISTS (SELECT 1 FROM session_vendors sv WHERE sv.session_id='PMK-2026-10' AND sv.vendor_id=vendors.id);
