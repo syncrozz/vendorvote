@@ -1,4 +1,4 @@
-import { db } from 'hatchable';
+import { db } from './db.js';
 export const access = 'admin';
 export const methods = ['POST'];
 export default async function (req, res) {
@@ -26,6 +26,28 @@ export default async function (req, res) {
   if(!rows.length)return res.status(404).json({error:'Peniaga tidak ditemui.'});
   await db.query('INSERT INTO admin_audit_log (actor,action,details) VALUES ($1,$2,$3::jsonb)',[actor,'set_vendor_active',JSON.stringify({id,active})]);
   return res.json({ok:true,message:'Status peniaga dikemas kini.'});
+ }
+ if(action==='update_vendor_image'){
+  const id=String(req.body?.vendorId||'').trim();
+  const imageUrl=String(req.body?.imageUrl||'').trim();
+  const {rows}=await db.query('UPDATE vendors SET image_url=$2 WHERE id=$1 RETURNING id,name,image_url',[id,imageUrl]);
+  if(!rows.length)return res.status(404).json({error:'Peniaga tidak ditemui.'});
+  await db.query('INSERT INTO admin_audit_log (actor,action,details) VALUES ($1,$2,$3::jsonb)',[actor,'update_vendor_image',JSON.stringify({id,imageUrl:imageUrl?'(set)':'(cleared)'})]);
+  return res.json({ok:true,message:'Gambar branding peniaga berjaya dikemas kini.',vendor:rows[0]});
+ }
+ if(action==='update_vendor_slug'){
+  const id=String(req.body?.vendorId||'').trim();
+  let slug=String(req.body?.slug||'').trim().toLowerCase();
+  slug=slug.replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'');
+  if(!slug)return res.status(400).json({error:'Slug tidak sah. Gunakan huruf kecil, nombor, atau tanda sempang.'});
+  const {rows:conflict}=await db.query('SELECT id, name FROM vendors WHERE slug=$1 AND id<>$2',[slug,id]);
+  if(conflict && conflict.length){
+   return res.status(409).json({error:`Slug "/${slug}" telah digunakan oleh peniaga ${conflict[0].name} (${conflict[0].id}). Sila pilih slug yang berbeza.`});
+  }
+  const {rows}=await db.query('UPDATE vendors SET slug=$2 WHERE id=$1 RETURNING id,name,slug',[id,slug]);
+  if(!rows.length)return res.status(404).json({error:'Peniaga tidak ditemui.'});
+  await db.query('INSERT INTO admin_audit_log (actor,action,details) VALUES ($1,$2,$3::jsonb)',[actor,'update_vendor_slug',JSON.stringify({id,slug})]);
+  return res.json({ok:true,message:`Pautan slug gerai berjaya dikemas kini kepada /${slug}`,vendor:rows[0]});
  }
  return res.status(400).json({error:'Tindakan admin tidak dikenali.'});
 }

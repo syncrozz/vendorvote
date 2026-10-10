@@ -1,0 +1,8 @@
+{
+  "name": "VendorVote — Pasar Malam KPMBP",
+  "description": "Sistem undian peniaga pilihan pelajar Pasar Malam KPMBP.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

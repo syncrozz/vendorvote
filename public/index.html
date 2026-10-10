@@ -1,2 +1,110 @@
 <!doctype html>
-<html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101820"><title>VendorVote — Pasar Malam KPMBP</title><link rel="stylesheet" href="/style.css"></head><body><main class="shell"><header class="brand"><div class="mark">V</div><div><div class="brandname">VendorVote</div><div class="subbrand">PASAR MALAM KPMBP</div></div><a class="adminlink" href="/admin.html">Admin</a></header><section class="intro"><span class="eyebrow">PILIHAN ANDA, SUARA ANDA</span><h1>Siapa peniaga kegemaran anda?</h1><p>Pilih sehingga <strong id="maxChoices">5</strong> peniaga yang anda gemari. Undian anda membantu urus setia menilai vendor pilihan pelajar.</p><div class="session-pill" id="sessionStatus">Memuatkan sesi undian…</div></section><form id="voteForm"><section><div class="sectionhead"><h2>Pilih peniaga</h2><span class="counter" id="counter">0/5 dipilih</span></div><div class="vendor-grid" id="vendors"><div class="loading">Sedang memuatkan senarai peniaga…</div></div></section><section class="submit-panel"><label for="studentId">ID Pelajar KPMBP</label><input id="studentId" name="studentId" autocomplete="off" autocapitalize="characters" placeholder="Contoh: PDL2502145" required maxlength="32"><p class="hint">ID anda digunakan untuk memastikan satu undian sahaja bagi setiap sesi.</p><button id="submitBtn" type="submit">Hantar Undian <span>→</span></button><p class="notice" id="notice" role="status" aria-live="polite"></p></section></form><footer>VendorVote · Sistem undian Pasar Malam KPMBP</footer></main><script src="/app.js"></script></body></html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#101820">
+  <meta name="description" content="Sistem undian peniaga pilihan pelajar Pasar Malam KPMBP.">
+  <meta property="og:title" content="VendorVote — Pasar Malam KPMBP">
+  <meta property="og:description" content="Sistem undian peniaga pilihan pelajar Pasar Malam KPMBP.">
+  <title>VendorVote — Pasar Malam KPMBP</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="brand">
+      <div class="mark">V</div>
+      <div>
+        <div class="brandname">VendorVote</div>
+        <div class="subbrand">PASAR MALAM KPMBP</div>
+      </div>
+      <a class="adminlink" id="adminLink" href="/admin.html" aria-haspopup="dialog">🔒 Admin</a>
+    </header>
+
+    <section class="intro">
+      <span class="eyebrow">PILIHAN ANDA, SUARA ANDA</span>
+      <h1>Peniaga kegemaran anda?</h1>
+      <p>Pilih sehingga <strong id="maxChoices">5</strong> peniaga yang anda gemari. Undian anda membantu urus setia menilai vendor pilihan pelajar.</p>
+      <div class="session-pill" id="sessionStatus">Memuatkan sesi undian…</div>
+    </section>
+
+    <form id="voteForm">
+      <!-- Banner Gerai Pilihan Imbasan QR Peniaga -->
+      <div id="qrSlugBanner" class="qr-slug-banner" hidden></div>
+
+      <section>
+        <div class="sectionhead">
+          <h2 id="vendorSectionTitle">Pilih peniaga</h2>
+          <span class="counter" id="counter">0/5 dipilih</span>
+        </div>
+        <div class="search-wrap">
+          <div class="search-input-box">
+            <span class="search-icon" aria-hidden="true">🔍</span>
+            <input type="search" id="vendorSearch" placeholder="Cari peniaga atau menu (cth: nasi lemak, colek, leemau)..." autocomplete="off" aria-label="Cari peniaga">
+            <button type="button" id="clearSearch" class="search-clear" aria-label="Kosongkan carian" hidden>×</button>
+          </div>
+          <div id="searchSuggestion" class="search-suggestion-bar" hidden></div>
+        </div>
+        <div class="vendor-grid" id="vendors">
+          <div class="loading">Sedang memuatkan senarai peniaga…</div>
+        </div>
+      </section>
+
+      <section class="submit-panel">
+        <label for="studentId">ID Pelajar KPMBP</label>
+        <input id="studentId" name="studentId" autocomplete="off" autocapitalize="characters" placeholder="Contoh: DCAT-2402-016 atau PDA-2602-001" required maxlength="32">
+        
+        <!-- Status Kuota Undian Pelajar -->
+        <div id="studentQuotaBox" class="quota-box" hidden>
+          <div class="quota-header">
+            <span class="quota-title" id="quotaStudentName">Nama Pelajar</span>
+            <span class="quota-count" id="quotaText">0 / 5 Undian</span>
+          </div>
+          <div class="quota-dots" id="quotaDots"></div>
+        </div>
+
+        <p class="hint" id="quotaHint">Anda boleh mengundi secara berasingan di gerai berbeza sehingga had maksimum 5 undian bagi setiap sesi.</p>
+        <button id="submitBtn" type="submit">Hantar Undian <span>→</span></button>
+        <p class="notice" id="notice" role="status" aria-live="polite"></p>
+      </section>
+    </form>
+
+    <footer>VendorVote · Sistem undian Pasar Malam KPMBP</footer>
+  </main>
+
+  <!-- Modal PIN Keselamatan untuk Akses Admin Konsol -->
+  <div id="homeAdminPinModal" class="admin-modal-backdrop" hidden>
+    <div class="admin-modal-card" role="dialog" aria-modal="true" aria-labelledby="homeAdminModalTitle">
+      <div class="admin-modal-head">
+        <div>
+          <h3 id="homeAdminModalTitle" class="admin-modal-title">🔒 Akses Mod Admin</h3>
+          <p class="admin-modal-sub">Sila masukkan 4-digit PIN keselamatan.</p>
+        </div>
+        <button type="button" id="closeHomePinModalBtn" class="admin-modal-close" aria-label="Tutup modal">×</button>
+      </div>
+
+      <form id="homeAdminPinForm" onsubmit="return false;" autocomplete="off">
+        <div class="pin-input-wrap">
+          <input
+            type="password"
+            id="homeAdminPinInput"
+            class="pin-input"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength="4"
+            placeholder="Masukkan 4-digit PIN"
+            autocomplete="off"
+            aria-label="4-digit PIN keselamatan"
+          >
+        </div>
+        <div id="homeAdminPinError" class="pin-error-msg" hidden></div>
+        <button type="submit" id="homeAdminPinSubmitBtn" class="btn-pin-submit">
+          🔑 Sahkan PIN Admin
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

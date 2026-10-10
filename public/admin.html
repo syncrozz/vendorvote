@@ -1,1 +1,338 @@
-<!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin — VendorVote</title><link rel="stylesheet" href="/style.css"></head><body><main class="shell admin-shell"><header class="brand"><div class="mark">V</div><div><div class="brandname">VendorVote</div><div class="subbrand">ADMIN CONTROL CENTER</div></div></header><div class="admin-head"><h1>Ringkasan undian</h1><a href="/">← Halaman pelajar</a></div><div id="adminStatus" class="panel">Mengesahkan akses admin…</div><div id="dashboard" hidden><section class="stats" id="stats"></section><section class="panel"><h2>Keputusan mengikut sesi</h2><div class="tablewrap"><table><thead><tr><th>Peniaga</th><th>Undian</th><th>Had minimum</th><th>Status</th><th>Prestasi</th></tr></thead><tbody id="results"></tbody></table></div></section><section class="panel"><h2>Import ID pelajar yang layak</h2><p class="smallnote">Tampal satu ID pelajar pada setiap baris. Hanya ID dalam roster aktif boleh menghantar undian. Semakan ini mengelakkan ID rawak, tetapi bukan bukti identiti pemilik ID.</p><textarea id="roster" rows="5" style="width:100%;border:1px solid #d5dee2;border-radius:10px;padding:12px;font:inherit" placeholder="PDL2502145&#10;PDL2502115&#10;PDL2502061"></textarea><button class="primary" id="importBtn" style="margin-top:10px">Import / Aktifkan ID</button><p id="importStatus" class="smallnote"></p></section><section class="panel"><h2>Sesi undian</h2><div class="tablewrap"><table><thead><tr><th>Nama sesi</th><th>Status</th><th>Mula</th><th>Tamat</th><th>Had minimum</th></tr></thead><tbody id="sessions"></tbody></table></div><p class="smallnote">Pengurusan sesi lanjutan dan eksport laporan akan ditambah dalam fasa seterusnya.</p></section></div><script src="/admin.js"></script></main></body></html>
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin — VendorVote Pasar Malam KPMBP</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main class="shell admin-shell">
+  <header class="brand">
+    <div class="mark">V</div>
+    <div>
+      <div class="brandname">VendorVote</div>
+      <div class="subbrand">ADMIN CONTROL CENTER · PASAR MALAM KPMBP</div>
+    </div>
+  </header>
+
+  <!-- Skrin Kunci: Pengguna Mesti Memasukkan No. PIN Keselamatan Sebelum Boleh Akses -->
+  <section id="adminLockScreen" class="admin-lock-screen">
+    <div class="lock-card">
+      <div class="lock-icon-badge">🔒</div>
+      <h2>Akses Mod Admin Diperlukan</h2>
+      <p class="lock-subtitle">Halaman ini dikunci oleh akses pentadbir. Sila masukkan 4-digit PIN keselamatan untuk membuka paparan.</p>
+
+      <form id="lockScreenPinForm" onsubmit="return false;" autocomplete="off">
+        <div class="pin-input-wrap">
+          <input
+            type="password"
+            id="lockScreenPinInput"
+            class="pin-input"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength="4"
+            placeholder="Masukkan 4-digit PIN"
+            autocomplete="off"
+            autofocus
+            aria-label="4-digit PIN keselamatan"
+          >
+        </div>
+        <div id="lockScreenPinError" class="pin-error-msg" hidden></div>
+        <button type="submit" id="lockScreenSubmitBtn" class="btn-pin-submit">
+          🔑 Sahkan PIN Admin
+        </button>
+      </form>
+
+      <div style="margin-top:18px">
+        <a href="/" class="smallnote" style="color:var(--muted);text-decoration:none">← Kembali ke Halaman Pelajar</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kandungan Pentadbir: Hanya Dipaparkan Selepas PIN Disahkan -->
+  <div id="adminContentContainer" hidden>
+    <div class="admin-head">
+      <h1>Ringkasan & Pengurusan Undian</h1>
+      <div class="admin-mode-bar">
+        <button type="button" id="adminModeBtn" class="btn-admin-mode active" title="Mod Admin sedang aktif.">
+          <span id="adminModeStatus">🟢 Admin Mode Aktif</span>
+        </button>
+        <a href="/" id="backToStudentLink" class="btn-secondary" style="font-size:12px;padding:8px 12px;text-decoration:none;display:inline-flex;align-items:center;gap:6px">← Halaman Pelajar</a>
+      </div>
+    </div>
+
+    <div id="adminStatus" class="panel" hidden>Mengesahkan akses admin…</div>
+
+    <div id="dashboard">
+    <!-- Statistik Pantas -->
+    <section class="stats" id="stats"></section>
+
+    <!-- Panel Eksport CSV -->
+    <section class="panel">
+      <h2>📥 Eksport Data & Laporan (Format CSV)</h2>
+      <p class="smallnote">Muat turun data undian terkini dalam format CSV untuk analisis Excel atau pengurusan rekod urus setia.</p>
+      <div class="btn-row">
+        <a href="/api/admin-export-results" download class="btn-secondary" id="exportResultsLink">
+          📊 Muat Turun Keputusan Undian (CSV)
+        </a>
+        <a href="/api/admin-export-vendors" download class="btn-secondary" id="exportVendorsLink">
+          🏪 Muat Turun Senarai Peniaga (CSV)
+        </a>
+        <a href="/api/admin-export-roster" download class="btn-secondary" id="exportRosterLink">
+          🎓 Muat Turun Roster Pelajar (CSV) <span id="rosterExportBadge" style="font-size:11px;font-weight:700"></span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Keputusan Sesi -->
+    <section class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 style="margin:0">Keputusan Undian Mengikut Sesi</h2>
+        <a href="/api/admin-export-results" download class="btn-secondary" style="font-size:11.5px;padding:6px 10px">Eksport CSV ↓</a>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Peniaga</th>
+              <th>Menu / Telefon</th>
+              <th>Undian</th>
+              <th>Had Minimum</th>
+              <th>Status</th>
+              <th>Prestasi</th>
+            </tr>
+          </thead>
+          <tbody id="results"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Import Peniaga CSV -->
+    <section class="panel" id="vendorImportPanel">
+      <h2>🏪 Import Peniaga melalui Fail CSV</h2>
+      <div id="vendorLockNotice" class="admin-lock-banner">🔒 Mod Admin diperlukan untuk mengimport atau mengubah senarai peniaga. Sila klik <strong>Akses Mod Admin</strong> di atas.</div>
+      <p class="smallnote">Muat naik fail CSV senarai peniaga (format: <code>Bil, ID, Nama Peniaga, Menu, No. Telefon</code>). Data akan dimasukkan terus ke dalam pangkalan data dan dipautkan ke sesi undian aktif.</p>
+      
+      <div class="file-drop-zone" id="vendorDropZone">
+        📁 Klik untuk pilih fail CSV peniaga atau heret fail ke sini
+        <input type="file" id="vendorCsvFileInput" accept=".csv,text/csv" style="display:none">
+      </div>
+      <div id="selectedVendorFileName" class="smallnote" style="color:var(--green);font-weight:700;margin-bottom:8px"></div>
+
+      <textarea id="vendorCsvText" rows="4" style="width:100%;border:1px solid #d5dee2;border-radius:10px;padding:12px;font:inherit;font-size:12px" placeholder="Atau tampal teks CSV peniaga di sini (Bil,ID,Nama Peniaga,Menu,No. Telefon)..."></textarea>
+      
+      <div style="margin-top:10px;display:flex;gap:10px;align-items:center">
+        <button class="btn-primary-sm" id="importVendorsBtn">Proses & Import Peniaga CSV</button>
+        <button type="button" class="btn-secondary" id="loadKpmbpSampleBtn" style="font-size:11.5px">Muat Semula 61 Peniaga KPMBP Rasmi</button>
+      </div>
+      <p id="vendorImportStatus" class="smallnote"></p>
+    </section>
+
+    <!-- Import ID Pelajar -->
+    <section class="panel" id="rosterImportPanel">
+      <h2>🎓 Import ID Pelajar Layak (Roster)</h2>
+      <div id="rosterLockNotice" class="admin-lock-banner">🔒 Mod Admin diperlukan untuk mengimport atau mengemas kini roster pelajar. Sila klik <strong>Akses Mod Admin</strong> di atas.</div>
+      <p class="smallnote">Muat naik fail CSV (format: <code>Bil, No_Pelajar, Nama_Pelajar, Kelas</code>) atau tampal senarai ID pelajar. Hanya ID pelajar aktif layak menghantar undian.</p>
+      
+      <div class="file-drop-zone" id="rosterDropZone">
+        📁 Klik untuk pilih fail CSV pelajar (cth: pelajar_kpmbp.csv) atau heret fail ke sini
+        <input type="file" id="rosterCsvFileInput" accept=".csv,text/csv,.txt" style="display:none">
+      </div>
+      <div id="selectedRosterFileName" class="smallnote" style="color:var(--green);font-weight:700;margin-bottom:8px"></div>
+
+      <textarea id="roster" rows="4" style="width:100%;border:1px solid #d5dee2;border-radius:10px;padding:12px;font:inherit;font-size:12px" placeholder="Atau tampal teks CSV / senarai ID pelajar di sini (cth: DCAT-2402-016 atau PDA-2602-001)..."></textarea>
+      
+      <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn-primary-sm" id="importBtn">Proses & Import Roster Pelajar</button>
+        <button type="button" class="btn-secondary" id="loadKpmbpRosterBtn" style="font-size:11.5px">Muat Semula 680 Pelajar KPMBP Rasmi</button>
+      </div>
+      <p id="importStatus" class="smallnote"></p>
+    </section>
+
+    <!-- Sesi Undian -->
+    <section class="panel">
+      <h2>📅 Sesi Undian Semasa</h2>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nama Sesi</th>
+              <th>Status</th>
+              <th>Mula</th>
+              <th>Tamat</th>
+              <th>Had Minimum</th>
+              <th>Had Pilihan</th>
+            </tr>
+          </thead>
+          <tbody id="sessions"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Senarai Semua Peniaga Berdaftar -->
+    <section class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 style="margin:0">Senarai Semua Peniaga Berdaftar (<span id="vendorCountBadge">0</span>)</h2>
+        <a href="/api/admin-export-vendors" download class="btn-secondary" style="font-size:11.5px;padding:6px 10px">Eksport CSV ↓</a>
+      </div>
+      <div class="tablewrap" style="max-height:400px;overflow-y:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Gambar (1:1)</th>
+              <th>Nama Peniaga</th>
+              <th>Menu Jualan</th>
+              <th>Slug &amp; Pautan QR</th>
+              <th>No. Telefon</th>
+              <th>Status</th>
+              <th>Tindakan</th>
+            </tr>
+          </thead>
+          <tbody id="allVendorsList"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  </div>
+
+  <!-- Modal Tetapan Slug & Kod QR Gerai Peniaga -->
+  <div id="vendorSlugQrModal" class="admin-modal-backdrop" hidden>
+    <div class="admin-modal-card" style="max-width:480px" role="dialog" aria-modal="true" aria-labelledby="vendorSlugQrModalTitle">
+      <div class="admin-modal-head">
+        <div>
+          <h3 id="vendorSlugQrModalTitle" class="admin-modal-title">📱 Pautan Slug &amp; Kod QR Gerai</h3>
+          <p class="admin-modal-sub">Uruskan pautan slug unik peniaga dan jana Kod QR untuk diletakkan di gerai.</p>
+        </div>
+        <button type="button" id="closeVendorSlugQrModalBtn" class="admin-modal-close" aria-label="Tutup modal">×</button>
+      </div>
+
+      <div class="qr-preview-box">
+        <img id="vendorQrPreviewImg" src="" alt="Kod QR Gerai" class="qr-code-img">
+        <div id="vendorQrUrlBadge" class="slug-url-badge">https://vendorvote.edu.my/abg-zam</div>
+      </div>
+
+      <form id="vendorSlugForm" onsubmit="return false;">
+        <input type="hidden" id="vendorSlugTargetId">
+        
+        <div style="margin-bottom:12px">
+          <label style="display:block;font-size:12px;font-weight:750;margin-bottom:5px">Peniaga &amp; No. Gerai:</label>
+          <div id="vendorSlugTargetInfo" style="font-weight:800;font-size:13.5px;color:var(--ink);padding:6px 10px;background:#f4f7f9;border-radius:8px"></div>
+        </div>
+
+        <div style="margin-bottom:14px">
+          <label for="vendorCustomSlugInput" style="display:block;font-size:12px;font-weight:750;margin-bottom:5px">Tetapkan Slug Peniaga:</label>
+          <div style="display:flex;align-items:center;background:#fff;border:1px solid #ccd8df;border-radius:10px;overflow:hidden">
+            <span style="padding:10px 10px 10px 12px;background:#f0f4f7;font-size:12.5px;color:var(--muted);font-weight:700;border-right:1px solid #ccd8df">/</span>
+            <input
+              type="text"
+              id="vendorCustomSlugInput"
+              placeholder="cth: abg-zam"
+              style="flex:1;border:none;padding:10px 12px;font:inherit;font-size:13px;outline:none"
+              autocomplete="off"
+              autocapitalize="none"
+            >
+          </div>
+          <small style="display:block;margin-top:4px;font-size:11px;color:var(--muted)">Hanya huruf kecil, nombor, dan tanda sempang (cth: abg-zam, ais-kepal).</small>
+        </div>
+
+        <div id="vendorSlugMsg" class="smallnote" style="margin-bottom:12px;text-align:center"></div>
+
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button type="submit" id="saveVendorSlugBtn" class="btn-primary-sm" style="flex:1;justify-content:center;padding:10px">
+            💾 Simpan Slug
+          </button>
+          <button type="button" id="copyVendorSlugUrlBtn" class="btn-secondary" style="padding:10px 12px;font-size:12px">
+            📋 Salin Pautan
+          </button>
+          <button type="button" id="openVendorSlugUrlBtn" class="btn-secondary" style="padding:10px 12px;font-size:12px">
+            ↗ Buka
+          </button>
+        </div>
+
+        <button type="button" id="printVendorStandeeBtn" class="btn-secondary" style="width:100%;justify-content:center;padding:10px;border-color:#116850;color:#116850;font-weight:800">
+          🖨️ Cetak / Pratonton Standee QR Gerai
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Tukar / Masukkan Gambar 1:1 Peniaga -->
+  <div id="vendorImageModal" class="admin-modal-backdrop" hidden>
+    <div class="admin-modal-card" style="max-width:440px" role="dialog" aria-modal="true" aria-labelledby="vendorImageModalTitle">
+      <div class="admin-modal-head">
+        <div>
+          <h3 id="vendorImageModalTitle" class="admin-modal-title">🖼️ Gambar Branding Peniaga (1:1)</h3>
+          <p class="admin-modal-sub" id="vendorImageModalSub">Kemas kini foto atau logo branding 1:1 untuk peniaga.</p>
+        </div>
+        <button type="button" id="closeVendorImageModalBtn" class="admin-modal-close" aria-label="Tutup modal">×</button>
+      </div>
+
+      <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:16px">
+        <div style="width:130px;height:130px;border-radius:16px;border:2px solid var(--line);overflow:hidden;background:#f0f5f7;box-shadow:0 4px 12px rgba(0,0,0,0.08);position:relative">
+          <img id="vendorImagePreview" src="" alt="Pratonton" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.src='https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&h=400&q=80'">
+          <span style="position:absolute;bottom:4px;right:6px;background:rgba(0,0,0,0.65);color:white;font-size:9.5px;font-weight:700;padding:2px 5px;border-radius:4px">1:1 Nisbah</span>
+        </div>
+        <span id="vendorImageTargetName" style="font-weight:800;font-size:14px;margin-top:8px"></span>
+      </div>
+
+      <form id="vendorImageForm" onsubmit="return false;">
+        <input type="hidden" id="vendorImageTargetId">
+        
+        <div style="margin-bottom:12px">
+          <label style="display:block;font-size:12px;font-weight:750;margin-bottom:5px">Pautan URL Gambar (Web):</label>
+          <input type="url" id="vendorImageUrlInput" placeholder="https://images.unsplash.com/... atau URL gambar" style="width:100%;border:1px solid #ccd8df;border-radius:10px;padding:10px 12px;font:inherit;font-size:12.5px;outline:none">
+        </div>
+
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:12px;font-weight:750;margin-bottom:5px">Atau Muat Naik Fail Imej dari Peranti:</label>
+          <input type="file" id="vendorImageFileInput" accept="image/*" style="font-size:12px">
+        </div>
+
+        <div id="vendorImageMsg" class="smallnote" style="margin-bottom:12px;text-align:center"></div>
+
+        <div style="display:flex;gap:8px">
+          <button type="submit" id="saveVendorImageBtn" class="btn-primary-sm" style="flex:1;justify-content:center;padding:11px">💾 Simpan Gambar</button>
+          <button type="button" id="cancelVendorImageBtn" class="btn-secondary" style="padding:11px 14px">Batal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal PIN Akses Mod Admin -->
+  <div id="adminPinModal" class="admin-modal-backdrop" hidden>
+    <div class="admin-modal-card" role="dialog" aria-modal="true" aria-labelledby="pinModalTitle">
+      <div class="admin-modal-head">
+        <div>
+          <h3 id="pinModalTitle" class="admin-modal-title">🔒 Akses Mod Admin</h3>
+          <p class="admin-modal-sub">Sila masukkan 4-digit PIN keselamatan.</p>
+        </div>
+        <button type="button" class="admin-modal-close" id="adminModalClose" aria-label="Tutup modal">×</button>
+      </div>
+      <form id="adminPinForm" autocomplete="off" onsubmit="return false;">
+        <div class="pin-input-wrap">
+          <input
+            type="password"
+            id="adminPinInput"
+            class="pin-input"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength="4"
+            placeholder="Masukkan 4-digit PIN"
+            autocomplete="off"
+            aria-label="4-digit PIN keselamatan"
+          >
+        </div>
+        <div id="pinErrorMsg" class="pin-error-msg" hidden></div>
+        <button type="submit" id="adminPinSubmitBtn" class="btn-pin-submit">
+          🔑 Sahkan PIN Admin
+        </button>
+      </form>
+    </div>
+  </div>
+</main>
+<script src="/admin.js"></script>
+</body>
+</html>

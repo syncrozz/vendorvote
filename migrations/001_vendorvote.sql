@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS vendors (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   menu_description TEXT NOT NULL DEFAULT '',
+  phone TEXT NOT NULL DEFAULT '',
   image_url TEXT NOT NULL DEFAULT '',
+  slug TEXT NOT NULL DEFAULT '',
   active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -23,6 +25,8 @@ CREATE TABLE IF NOT EXISTS session_vendors (
 );
 CREATE TABLE IF NOT EXISTS eligible_students (
   student_id TEXT PRIMARY KEY,
+  student_name TEXT NOT NULL DEFAULT '',
+  class_name TEXT NOT NULL DEFAULT '',
   active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

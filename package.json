@@ -1,0 +1,16 @@
+{
+  "name": "vendorvote",
+  "version": "1.0.0",
+  "description": "VendorVote — Pasar Malam KPMBP",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "echo 'Build complete'",
+    "migrate": "node scripts/migrate.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.23.1"
+  }
+}
