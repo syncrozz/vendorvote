@@ -45,32 +45,30 @@ async function runTestSuite() {
 
   // Pick a fresh student for clean testing
   console.log('\n▶ UJIAN 3: Mencari ID Pelajar Ujian...');
-  const candidateIds = ['PDL-2502-049', 'PDL2502049', 'PDA-2602-072', 'PDA-2503-007', 'PPD-2602-032'];
   let testStudentId = null;
   let statusData = null;
 
-  for (const cid of candidateIds) {
-    const res = await fetch(`${BASE_URL}/api/student-status?studentId=${cid}&sessionId=${sessionId}`);
-    const data = await res.json();
-    if (data.eligible && data.remainingVotes === 5) {
-      testStudentId = cid;
-      statusData = data;
-      break;
+  // Let's find an unvoted student dynamically from eligible_students
+  try {
+    const { db } = await import('../lib/db.js');
+    const { rows } = await db.query(
+      `SELECT es.student_id FROM eligible_students es 
+       LEFT JOIN votes v ON v.student_id = es.student_id AND v.session_id = $1
+       WHERE es.active = TRUE AND v.id IS NULL 
+       LIMIT 1`,
+      [sessionId]
+    );
+    if (rows.length) {
+      testStudentId = rows[0].student_id;
     }
-  }
+  } catch (_) {}
 
   if (!testStudentId) {
-    // If all candidates voted, pick any eligible student and we can verify their current state
-    for (const cid of candidateIds) {
-      const res = await fetch(`${BASE_URL}/api/student-status?studentId=${cid}&sessionId=${sessionId}`);
-      const data = await res.json();
-      if (data.eligible) {
-        testStudentId = cid;
-        statusData = data;
-        break;
-      }
-    }
+    testStudentId = 'PDA-2602-072';
   }
+
+  const res = await fetch(`${BASE_URL}/api/student-status?studentId=${testStudentId}&sessionId=${sessionId}`);
+  statusData = await res.json();
 
   console.log(`Status Pelajar Ujian (${testStudentId}):`, {
     eligible: statusData?.eligible,
@@ -218,7 +216,11 @@ async function runTestSuite() {
   console.table(testReport);
 }
 
-runTestSuite().catch(err => {
-  console.error('Ralat pelaksanaan ujian:', err);
-  process.exit(1);
-});
+runTestSuite()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch(err => {
+    console.error('Ralat pelaksanaan ujian:', err);
+    process.exit(1);
+  });
