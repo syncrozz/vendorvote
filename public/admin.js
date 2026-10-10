@@ -61,6 +61,12 @@ function applyAdminModeUI() {
   if (vendorNotice) vendorNotice.hidden = active;
   if (rosterNotice) rosterNotice.hidden = active;
 
+  // Kemas kini pautan eksport CSV dengan PIN apabila Mod Admin aktif
+  document.querySelectorAll('a[href*="admin-export-"]').forEach(link => {
+    const base = link.getAttribute('href').split('?')[0];
+    link.setAttribute('href', active ? `${base}?pin=5313` : base);
+  });
+
   const importVendorsBtn = $('importVendorsBtn');
   const loadKpmbpSampleBtn = $('loadKpmbpSampleBtn');
   const vendorCsvText = $('vendorCsvText');

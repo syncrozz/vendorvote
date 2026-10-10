@@ -5,14 +5,9 @@ import { fileURLToPath } from 'url';
 import publicSessionHandler from './api/public-session.js';
 import voteHandler from './api/vote.js';
 import studentStatusHandler from './api/student-status.js';
-import adminDashboardHandler from './api/admin-dashboard.js';
-import adminRosterHandler from './api/admin-roster.js';
-import adminManageHandler from './api/admin-manage.js';
-import adminImportVendorsHandler from './api/admin-import-vendors.js';
-import adminExportResultsHandler from './api/admin-export-results.js';
-import adminExportVendorsHandler from './api/admin-export-vendors.js';
-import adminExportRosterHandler from './api/admin-export-roster.js';
-import { db } from './api/db.js';
+import adminHandler from './api/admin.js';
+import healthHandler from './api/health.js';
+import { db } from './lib/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,53 +21,9 @@ app.use(express.urlencoded({ extended: true }));
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Admin authentication middleware
-const requireAdmin = (req, res, next) => {
-  const secret = process.env.ADMIN_SECRET;
-  const ADMIN_PIN = '5313';
-
-  const authHeader = req.headers['authorization'];
-  const adminKey = req.headers['x-admin-key'];
-  const adminPin = req.headers['x-admin-pin'];
-
-  // Check valid Admin PIN
-  if (adminPin === ADMIN_PIN || adminKey === ADMIN_PIN || authHeader === `Bearer ${ADMIN_PIN}`) {
-    req.member = {
-      email: process.env.ADMIN_EMAIL || 'admin@kpmbp.edu.my',
-      role: 'admin'
-    };
-    return next();
-  }
-
-  if (secret && (adminKey === secret || authHeader === `Bearer ${secret}`)) {
-    req.member = {
-      email: process.env.ADMIN_EMAIL || 'admin@kpmbp.edu.my',
-      role: 'admin'
-    };
-    return next();
-  }
-
-  return res.status(403).json({ error: 'Akses ditolak. Sila masukkan PIN keselamatan pentadbir yang sah.' });
-};
-
-// Admin PIN verification endpoint
-app.post('/api/admin-verify-pin', (req, res) => {
-  const { pin } = req.body || {};
-  const ADMIN_PIN = '5313';
-  if (String(pin || '').trim() === ADMIN_PIN) {
-    return res.json({ ok: true, message: 'Admin Mode diaktifkan.' });
-  }
-  return res.status(401).json({ ok: false, error: 'PIN keselamatan tidak sah. Sila cuba lagi.' });
-});
-
 // Health check endpoint
-app.get('/api/health', async (req, res) => {
-  try {
-    const health = await db.getHealth();
-    res.json({ ok: true, database: health });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
+app.get('/api/health', (req, res, next) => {
+  healthHandler(req, res).catch(next);
 });
 
 // Public API endpoints
@@ -92,33 +43,42 @@ app.post('/api/student-status', (req, res, next) => {
   studentStatusHandler(req, res).catch(next);
 });
 
-// Admin API endpoints
-app.get('/api/admin-dashboard', requireAdmin, (req, res, next) => {
-  adminDashboardHandler(req, res).catch(next);
+// Admin API endpoints (Consolidated handler)
+app.post('/api/admin-verify-pin', (req, res, next) => {
+  adminHandler(req, res).catch(next);
 });
 
-app.post('/api/admin-roster', requireAdmin, (req, res, next) => {
-  adminRosterHandler(req, res).catch(next);
+app.get('/api/admin-dashboard', (req, res, next) => {
+  adminHandler(req, res).catch(next);
 });
 
-app.post('/api/admin-manage', requireAdmin, (req, res, next) => {
-  adminManageHandler(req, res).catch(next);
+app.post('/api/admin-roster', (req, res, next) => {
+  adminHandler(req, res).catch(next);
 });
 
-app.post('/api/admin-import-vendors', requireAdmin, (req, res, next) => {
-  adminImportVendorsHandler(req, res).catch(next);
+app.post('/api/admin-manage', (req, res, next) => {
+  adminHandler(req, res).catch(next);
 });
 
-app.get('/api/admin-export-results', requireAdmin, (req, res, next) => {
-  adminExportResultsHandler(req, res).catch(next);
+app.post('/api/admin-import-vendors', (req, res, next) => {
+  adminHandler(req, res).catch(next);
 });
 
-app.get('/api/admin-export-vendors', requireAdmin, (req, res, next) => {
-  adminExportVendorsHandler(req, res).catch(next);
+app.get('/api/admin-export-results', (req, res, next) => {
+  adminHandler(req, res).catch(next);
 });
 
-app.get('/api/admin-export-roster', requireAdmin, (req, res, next) => {
-  adminExportRosterHandler(req, res).catch(next);
+app.get('/api/admin-export-vendors', (req, res, next) => {
+  adminHandler(req, res).catch(next);
+});
+
+app.get('/api/admin-export-roster', (req, res, next) => {
+  adminHandler(req, res).catch(next);
+});
+
+// Catch-all for any other /api/admin/* paths
+app.all('/api/admin*', (req, res, next) => {
+  adminHandler(req, res).catch(next);
 });
 
 // SPA fallback for HTML pages

@@ -1,8 +1,13 @@
-import { db } from './db.js';
+import { db } from '../lib/db.js';
+
 export const access = 'public';
 export const methods = ['POST'];
 
-export default async function (req, res) {
+export default async function handler(req, res) {
+  if (req.method && req.method !== 'POST') {
+    return res.status(405).json({ error: 'Kaedah HTTP tidak dibenarkan.' });
+  }
+
   const studentId = String(req.body?.studentId || '').trim().toUpperCase();
   const sessionId = String(req.body?.sessionId || '').trim();
   const vendorIds = Array.isArray(req.body?.vendorIds)
@@ -119,6 +124,7 @@ export default async function (req, res) {
     if (err.statusCode) {
       return res.status(err.statusCode).json({ error: err.message });
     }
-    throw err;
+    console.error('[Vote Error]', err);
+    return res.status(500).json({ error: 'Ralat dalaman pelayan semasa merekodkan undian.' });
   }
 }
