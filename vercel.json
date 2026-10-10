@@ -11,8 +11,7 @@
     { "source": "/api/admin-export-results", "destination": "/api/admin?action=export-results" },
     { "source": "/api/admin-export-vendors", "destination": "/api/admin?action=export-vendors" },
     { "source": "/api/admin-export-roster", "destination": "/api/admin?action=export-roster" },
-    { "source": "/api/admin-:action*", "destination": "/api/admin?action=:action" },
-    { "source": "/api/admin/:action*", "destination": "/api/admin?action=:action" },
+    { "source": "/api/admin/:action([a-z0-9_-]+)", "destination": "/api/admin?action=:action" },
     { "source": "/((?!api/|.*\\..*).*)", "destination": "/index.html" }
   ]
 }

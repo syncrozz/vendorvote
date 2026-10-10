@@ -6,10 +6,25 @@ export const access = 'admin';
 export const methods = ['GET', 'POST'];
 
 function resolveAdminAction(req) {
+  // 1. Direct parsed query parameter (set by Express or Vercel)
   if (req.query?.action) {
     return String(req.query.action).toLowerCase();
   }
-  const urlPath = String(req.originalUrl || req.url || '').split('?')[0].toLowerCase();
+
+  // 2. Fallback query string parsing from req.url or req.originalUrl
+  const rawUrl = String(req.originalUrl || req.url || '');
+  if (rawUrl.includes('?')) {
+    try {
+      const u = new URL(rawUrl, 'http://localhost');
+      const actionFromQuery = u.searchParams.get('action');
+      if (actionFromQuery) {
+        return actionFromQuery.toLowerCase();
+      }
+    } catch (_) {}
+  }
+
+  // 3. Match from URL path
+  const urlPath = rawUrl.split('?')[0].toLowerCase();
   if (urlPath.includes('verify-pin')) return 'verify-pin';
   if (urlPath.includes('dashboard')) return 'dashboard';
   if (urlPath.includes('import-vendors')) return 'import-vendors';
@@ -19,7 +34,11 @@ function resolveAdminAction(req) {
   if (urlPath.includes('roster')) return 'roster';
   if (urlPath.includes('manage')) return 'manage';
 
+  // 4. Request body cues
   if (req.body?.adminAction) return String(req.body.adminAction).toLowerCase();
+  if (req.body?.action && ['create_session', 'update_session', 'set_vendor_active', 'update_vendor_image', 'update_vendor_slug'].includes(req.body.action)) {
+    return 'manage';
+  }
   if (req.body?.pin && !req.body?.action) return 'verify-pin';
 
   return 'dashboard';
